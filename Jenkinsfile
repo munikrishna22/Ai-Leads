@@ -1,37 +1,25 @@
-pipeline {
+pipeline{
     agent any
-
-    stages {
-        stage('Maven Build') {
-            when {
-                branch "develop"
-            }
-            steps {
-               echo "Maven build..."
+    stages{
+        stage("Git Checkout"){
+            steps{
+                git branch: 'main', credentialsId: 'github', url: 'https://github.com/munikrishna22/ai-leads'
             }
         }
-        stage('Dev Deploy') {
-            when {
-                branch "develop"
-            }
-            steps {
-               echo "Deploying to dev"
+         stage("Maven Build"){
+            steps{
+                sh 'mvn clean package'
             }
         }
-        stage('Test Deploy') {
-            when {
-                branch "test"
-            }
-            steps {
-               echo "Deploying to Test"
-            }
-        }
-        stage('Prod Deploy') {
-            when {
-                branch "main"
-            }
-            steps {
-               echo "Deploying to Production"
+         stage("Tomcat Deploy-Dev"){
+            steps{
+                sshagent(['tomcat-dev']) {
+                    // copy war file to tomcat
+                sh "scp -o StrictHostKeyChecking=no target/ai-leads.war ec2-user@172.31.43.216:/opt/tomcat9/webapps"
+                sh "ssh ec2-user@172.31.43.216 /opt/tomcat9/bin/shutdown.sh"
+                sh "ssh ec2-user@172.31.43.216 /opt/tomcat9/bin/startup.sh"
+                    
+                }
             }
         }
     }
